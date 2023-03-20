@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:convert';
+import 'dart:html';
 import 'dart:io';
 
 import 'package:args/args.dart';
@@ -29,6 +30,10 @@ void main(List<String> args) {
         "line": 19,
         "column": 11
       }
+    ],
+    "annotatedFontFamilies": [    // included if --font-family-report flag is used
+      ":MaterialIcons"
+      ":CuportinoIcons"
     ]
   }''')
     ..addSeparator('Where the "constantInstances" is a list of objects containing\n'
@@ -67,7 +72,11 @@ void main(List<String> args) {
     ..addOption('annotation-class-library-uri',
         help: 'The package: URI of the class of the annotation for classes '
               'that should be ignored.',
-        valueHelp: 'package:flutter/src/material/icons.dart');
+        valueHelp: 'package:flutter/src/material/icons.dart')
+    ..addFlag('font-family-report',
+        abbr: 'f',
+        negatable: false,
+        help: 'Font family report');
 
   final ArgResults argResults = parser.parse(args);
   T getArg<T>(String name) => argResults[name] as T;
@@ -87,6 +96,10 @@ void main(List<String> args) {
     stdout.writeln(parser.usage);
     exit(0);
   }
+  bool? includeAnnotatedFontFamilyReport;
+  if (getArg<bool>('font-family-report')) {
+    includeAnnotatedFontFamilyReport = true;
+  }
 
   final ConstFinder finder = ConstFinder(
     kernelFilePath: getArg<String>('kernel-file'),
@@ -94,6 +107,7 @@ void main(List<String> args) {
     className: getArg<String>('class-name'),
     annotationClassName: annotationClassName,
     annotationClassLibraryUri: annotationClassLibraryUri,
+    includeAnnotatedFontFamilyReport: includeAnnotatedFontFamilyReport,
   );
 
   final JsonEncoder encoder = getArg<bool>('pretty')

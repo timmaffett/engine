@@ -13,9 +13,11 @@ class _ConstVisitor extends RecursiveVisitor<void> {
     this.className,
     this.annotationClassLibraryUri,
     this.annotationClassName,
+    this.includeAnnotatedFontFamilyReport,
   )  : _visitedInstances = <String>{},
        constantInstances = <Map<String, dynamic>>[],
-       nonConstantLocations = <Map<String, dynamic>>[];
+       nonConstantLocations = <Map<String, dynamic>>[],
+       annotatedFontFamilies = <String>[];
 
   /// The path to the file to open.
   final String kernelFilePath;
@@ -29,6 +31,7 @@ class _ConstVisitor extends RecursiveVisitor<void> {
   final Set<String> _visitedInstances;
   final List<Map<String, dynamic>> constantInstances;
   final List<Map<String, dynamic>> nonConstantLocations;
+  final Set<String> annotatedFontFamilies;
 
   bool inIgnoredClass = false;
 
@@ -66,6 +69,12 @@ class _ConstVisitor extends RecursiveVisitor<void> {
   /// The library URI of the class of the annotation marking classes whose
   /// constant references should be ignored.
   final String? annotationClassLibraryUri;
+
+  /// If set to true then a report of all encountered font families used
+  /// in classes annotated with [annotationClassName] will be included
+  /// in the final report.  This requires [annotationClassName] and 
+  /// [annotationClassLibraryUri] to both also be supplied. 
+  final bool includeAnnotatedFontFamilyReport;
 
   // A cache of previously evaluated classes.
   static final Map<Class, bool> _classHeirarchyCache = <Class, bool>{};
@@ -154,7 +163,7 @@ class _ConstVisitor extends RecursiveVisitor<void> {
   @override
   void visitInstanceConstantReference(InstanceConstant node) {
     super.visitInstanceConstantReference(node);
-    if (!_matches(node.classNode) || inIgnoredClass) {
+    if (!_matches(node.classNode)/* || inIgnoredClass*/) {
       return;
     }
 
@@ -167,7 +176,15 @@ class _ConstVisitor extends RecursiveVisitor<void> {
       instance[kvp.key.asField.name.text] = value.value;
     }
     if (_visitedInstances.add(instance.toString())) {
-      constantInstances.add(instance);
+      if(inIgnoredClass) {
+        // in ignored class so we don't record constant instance but we may want to
+        // record the font-family referenced
+        if(includeAnnotatedFontFamilyReport) {
+          annotatedFontFamilies.add('${instance['fontPackage']??''}:${instance['fontFamily']??''}');
+        }
+      } else {
+        constantInstances.add(instance);
+      }
     }
   }
 }
@@ -184,12 +201,14 @@ class ConstFinder {
     required String className,
     String? annotationClassLibraryUri,
     String? annotationClassName,
+    bool? includeAnnotatedFontFamilyReport,
   })  : _visitor = _ConstVisitor(
                     kernelFilePath,
                     classLibraryUri,
                     className,
                     annotationClassLibraryUri,
                     annotationClassName,
+                    includeAnnotatedFontFamilyReport ?? false,
                   );
 
   final _ConstVisitor _visitor;
@@ -203,6 +222,8 @@ class ConstFinder {
     return <String, dynamic>{
       'constantInstances': _visitor.constantInstances,
       'nonConstantLocations': _visitor.nonConstantLocations,
+      if(_visitor.includeAnnotatedFontFamilyReport) 
+        'annotatedFontFamilies': _visitor.annotatedFontFamilies,
     };
   }
 }
