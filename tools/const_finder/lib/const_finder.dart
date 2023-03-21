@@ -17,7 +17,7 @@ class _ConstVisitor extends RecursiveVisitor<void> {
   )  : _visitedInstances = <String>{},
        constantInstances = <Map<String, dynamic>>[],
        nonConstantLocations = <Map<String, dynamic>>[],
-       annotatedFontFamilies = <String>[];
+       annotatedFontFamilies = <String>{};
 
   /// The path to the file to open.
   final String kernelFilePath;
