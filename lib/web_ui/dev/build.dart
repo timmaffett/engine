@@ -46,6 +46,10 @@ class BuildCommand extends Command<bool> with ArgUtils<bool> {
           'output will be located at "out/wasm_debug".\nThis only applies to '
           'the wasm build. The host build is always built in release mode.',
     );
+    argParser.addFlag(
+      'no-goma',
+      help: 'Specify --no-goma argment to gn',
+    );
   }
 
   @override
@@ -58,6 +62,7 @@ class BuildCommand extends Command<bool> with ArgUtils<bool> {
 
   bool get host => boolArg('host');
 
+  bool get nogoma => boolArg('no-goma');
   List<String> get targets => argResults?.rest ?? <String>[];
 
   @override
@@ -67,6 +72,7 @@ class BuildCommand extends Command<bool> with ArgUtils<bool> {
       GnPipelineStep(
         host: host,
         runtimeMode: runtimeMode,
+        nogoma: nogoma,
       ),
       NinjaPipelineStep(
         host: host,
@@ -99,10 +105,12 @@ class GnPipelineStep extends ProcessStep {
   GnPipelineStep({
     required this.host,
     required this.runtimeMode,
+    this.nogoma = false,
   });
 
   final bool host;
   final RuntimeMode runtimeMode;
+  final bool nogoma;
 
   @override
   String get description => 'gn';
@@ -115,11 +123,13 @@ class GnPipelineStep extends ProcessStep {
       return <String>[
         '--unoptimized',
         '--full-dart-sdk',
+        if (nogoma) '--no-goma'
       ];
     } else {
       return <String>[
         '--web',
         '--runtime-mode=${runtimeMode.name}',
+        if (nogoma) '--no-goma'
       ];
     }
   }
