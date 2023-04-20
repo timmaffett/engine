@@ -52,6 +52,10 @@ class BuildCommand extends Command<bool> with ArgUtils<bool> {
       help: 'Embed DWARF debugging info into the output wasm modules. This is '
           'only valid in debug mode.',
     );
+    argParser.addFlag(
+      'no-goma',
+      help: 'Specify --no-goma argument to gn',
+    );
   }
 
   @override
@@ -63,6 +67,8 @@ class BuildCommand extends Command<bool> with ArgUtils<bool> {
   bool get isWatchMode => boolArg('watch');
 
   bool get host => boolArg('host');
+
+  bool get nogoma => boolArg('no-goma');
 
   List<String> get targets => argResults?.rest ?? <String>[];
   bool get embedDwarf => boolArg('dwarf');
@@ -78,6 +84,7 @@ class BuildCommand extends Command<bool> with ArgUtils<bool> {
         host: host,
         runtimeMode: runtimeMode,
         embedDwarf: embedDwarf,
+        nogoma: nogoma,
       ),
       NinjaPipelineStep(
         host: host,
@@ -111,11 +118,13 @@ class GnPipelineStep extends ProcessStep {
     required this.host,
     required this.runtimeMode,
     required this.embedDwarf,
+    this.nogoma = false,
   });
 
   final bool host;
   final RuntimeMode runtimeMode;
   final bool embedDwarf;
+  final bool nogoma;
 
   @override
   String get description => 'gn';
@@ -128,6 +137,8 @@ class GnPipelineStep extends ProcessStep {
       return <String>[
         '--unoptimized',
         '--full-dart-sdk',
+        if (nogoma)
+          '--no-goma',
       ];
     } else {
       return <String>[
@@ -137,6 +148,8 @@ class GnPipelineStep extends ProcessStep {
           '--unoptimized',
         if (embedDwarf)
           '--wasm-use-dwarf',
+        if (nogoma)
+          '--no-goma',
       ];
     }
   }
